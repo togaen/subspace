@@ -8,8 +8,6 @@ build:asan --linkopt -fsanitize=address
 # For all builds, use C++17
 build --cxxopt="-std=c++17"
 build --cxxopt='-Wno-sign-compare'
-build --linkopt=-ldl
-build --linkopt=-lrt
 
 # For Apple Silicon
 build:apple_silicon --cpu=darwin_arm64
