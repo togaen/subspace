@@ -6,16 +6,15 @@
 #ifndef __COMMON_CHANNEL_H
 #define __COMMON_CHANNEL_H
 
-#include <pthread.h>
 #include <stdio.h>
-
-#include <cstdint>
-#include <string>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "toolbelt/bitset.h"
 #include "toolbelt/fd.h"
+#include <cstdint>
+#include <pthread.h>
+#include <string>
 
 namespace subspace {
 
@@ -39,7 +38,7 @@ static constexpr size_t kMaxMessage = 4096;
 // On the receiving end of the bridge, the padding is
 // not received and will not be written to.
 struct MessagePrefix {
-  int32_t padding;  // Padding for Socket::SendMessage.
+  int32_t padding; // Padding for Socket::SendMessage.
   int32_t message_size;
   int64_t ordinal;
   uint64_t timestamp;
@@ -47,9 +46,9 @@ struct MessagePrefix {
 };
 
 // Flag for flags field in MessagePrefix.
-constexpr int kMessageActivate = 1;  // This is a reliable activation message.
-constexpr int kMessageBridged = 2;   // This message came from the bridge.
-constexpr int kMessageSeen = 4;      // Message has been seen.
+constexpr int kMessageActivate = 1; // This is a reliable activation message.
+constexpr int kMessageBridged = 2;  // This message came from the bridge.
+constexpr int kMessageSeen = 4;     // Message has been seen.
 
 // We need a max channels number because the size of things in
 // shared memory needs to be fixed.
@@ -76,12 +75,12 @@ constexpr size_t kMaxChannelName = 64;
 // This is in shared memory, but it is only ever written by the
 // server so there is no lock required to access it in the clients.
 struct ChannelCounters {
-  uint16_t num_pub_updates;    // Number of updates to publishers.
-  uint16_t num_sub_updates;    // Number of updates to subscribers.
-  uint16_t num_pubs;           // Current number of publishers.
-  uint16_t num_reliable_pubs;  // Current number of reliable publishers.
-  uint16_t num_subs;           // Current number of subscribers.
-  uint16_t num_reliable_subs;  // Current number of reliable subscribers.
+  uint16_t num_pub_updates;   // Number of updates to publishers.
+  uint16_t num_sub_updates;   // Number of updates to subscribers.
+  uint16_t num_pubs;          // Current number of publishers.
+  uint16_t num_reliable_pubs; // Current number of reliable publishers.
+  uint16_t num_subs;          // Current number of subscribers.
+  uint16_t num_reliable_subs; // Current number of reliable subscribers.
 };
 
 struct SystemControlBlock {
@@ -95,34 +94,33 @@ struct SystemControlBlock {
 // addresses in each client.  Instead they use an offset from the
 // start of the ChannelControlBlock (CCB) as a pointer.
 struct SlotListElement {
-  int32_t prev = 0;
-  int32_t next = 0;
+  int32_t prev{};
+  int32_t next{};
 };
 
 // Double linked list header in shared memory.
 struct SlotList {
-  int32_t first = 0;
-  int32_t last = 0;
+  int32_t first{};
+  int32_t last{};
 };
 
 // This is the meta data for a slot.  It is always in a linked list.
 struct MessageSlot {
   SlotListElement element{};
-  int32_t id = 0;         // Unique ID for slot (0...num_slots-1).
-  int16_t ref_count = 0;  // Number of subscribers referring to this slot.
-  int16_t reliable_ref_count = 0;  // Number of reliable subscriber references.
-  int64_t ordinal = 0;             // Message ordinal held currently in slot.
-  int64_t message_size = 0;        // Size of message held in slot.
-  int32_t buffer_index = 0;        // Index of buffer.
-  toolbelt::BitSet<kMaxSlotOwners>
-      owners{};  // One bit per publisher/subscriber.
+  int32_t id{};                 // Unique ID for slot (0...num_slots-1).
+  int16_t ref_count{};          // Number of subscribers referring to this slot.
+  int16_t reliable_ref_count{}; // Number of reliable subscriber references.
+  int64_t ordinal{};            // Message ordinal held currently in slot.
+  int64_t message_size{};       // Size of message held in slot.
+  int32_t buffer_index{};       // Index of buffer.
+  toolbelt::BitSet<kMaxSlotOwners> owners{}; // One bit per publisher/subscriber.
 };
 
 // This is located just before the prefix of the first slot's buffer.  It
 // is 64 bits long to align the prefix to 64 bits.
 struct BufferHeader {
-  int32_t refs;     // Number of references to this buffer.
-  int32_t padding;  // Align to 64 bits.
+  int32_t refs;    // Number of references to this buffer.
+  int32_t padding; // Align to 64 bits.
 };
 
 // The control data for a channel.  This memory is
@@ -131,17 +129,17 @@ struct BufferHeader {
 // at a virtual address chosen by the OS.
 //
 // This is in shared memory so no pointers are possible.
-struct ChannelControlBlock {             // a.k.a CCB
-  char channel_name[kMaxChannelName]{};  // So that you can see the name in a
-                                         // debugger or hexdump.
-  int num_slots = 0;
-  int64_t next_ordinal = 0;  // Next ordinal to use.
-  int buffer_index = 0;      // Which buffer in buffers array to use.
-  int num_buffers = 0;       // Size of buffers array in shared memory.
+struct ChannelControlBlock {          // a.k.a CCB
+  char channel_name[kMaxChannelName]{}; // So that you can see the name in a
+                                      // debugger or hexdump.
+  int num_slots{};
+  int64_t next_ordinal{}; // Next ordinal to use.
+  int buffer_index{};     // Which buffer in buffers array to use.
+  int num_buffers{};      // Size of buffers array in shared memory.
 
   // Statistics counters.
-  int64_t total_bytes = 0;
-  int64_t total_messages = 0;
+  int64_t total_bytes{};
+  int64_t total_messages{};
 
   // Slot lists.
   // Active list: slots with active messages in them.
@@ -151,14 +149,14 @@ struct ChannelControlBlock {             // a.k.a CCB
   SlotList busy_list{};
   SlotList free_list{};
 
-  pthread_mutex_t lock{};  // Lock for this channel only.
+  pthread_mutex_t lock{}; // Lock for this channel only.
 
   // Variable number of MessageSlot structs (num_slots long).
   MessageSlot slots[0]{};
 };
 
-absl::StatusOr<SystemControlBlock *> CreateSystemControlBlock(
-    toolbelt::FileDescriptor &fd);
+absl::StatusOr<SystemControlBlock *>
+CreateSystemControlBlock(toolbelt::FileDescriptor &fd);
 
 struct SlotBuffer {
   SlotBuffer(int32_t slot_size) : slot_size(slot_size) {}
@@ -189,13 +187,12 @@ struct SharedMemoryFds {
     return *this;
   }
 
-  toolbelt::FileDescriptor ccb;     // Channel Control Block.
-  std::vector<SlotBuffer> buffers;  // Message Buffers.
+  toolbelt::FileDescriptor ccb;    // Channel Control Block.
+  std::vector<SlotBuffer> buffers; // Message Buffers.
 };
 
 // Aligned to given power of 2.
-template <int64_t alignment>
-int64_t Aligned(int64_t v) {
+template <int64_t alignment> int64_t Aligned(int64_t v) {
   return (v + (alignment - 1)) & ~(alignment - 1);
 }
 
@@ -222,7 +219,7 @@ struct BufferSet {
 // same process, each of them maps in the shared memory. No attempt
 // is made to share the Channel objects.
 class Channel {
- public:
+public:
   struct PublishedMessage {
     MessageSlot *new_slot;
     int64_t ordinal;
@@ -240,8 +237,9 @@ class Channel {
   // file descriptors for the allocated CCB and buffers.  The
   // SCB has already been allocated and will be mapped in for
   // this channel.  This is only used in the server.
-  absl::StatusOr<SharedMemoryFds> Allocate(
-      const toolbelt::FileDescriptor &scb_fd, int slot_size, int num_slots);
+  absl::StatusOr<SharedMemoryFds>
+  Allocate(const toolbelt::FileDescriptor &scb_fd, int slot_size,
+           int num_slots);
 
   // Client-side channel mapping.  The SharedMemoryFds contains the
   // file descriptors for the CCB and buffers.  The num_slots_
@@ -406,7 +404,7 @@ class Channel {
 
   const std::vector<BufferSet> &GetBuffers() const { return buffers_; }
 
- private:
+private:
   int32_t ToCCBOffset(void *addr) const {
     return (int32_t)(reinterpret_cast<char *>(addr) -
                      reinterpret_cast<char *>(ccb_));
@@ -469,7 +467,7 @@ class Channel {
   std::string name_;
   int num_slots_;
 
-  int channel_id_;  // ID allocated from server.
+  int channel_id_; // ID allocated from server.
   std::string type_;
 
   uint16_t num_updates_ = 0;
@@ -480,5 +478,5 @@ class Channel {
   bool debug_ = false;
 };
 
-}  // namespace subspace
+} // namespace subspace
 #endif /* __COMMON_CHANNEL_H */
